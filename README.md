@@ -34,3 +34,5 @@ The Express API provides endpoints to interact with the ONNX embeddings model an
 - POST /enter-data: Indexes data into Elasticsearch.
 - POST /vector-search: Performs a vector similarity search using the ONNX model.
 - POST /text-search: Performs a text-based fuzzy search on ProductName and Description.
+=======
+# elastic-cache
