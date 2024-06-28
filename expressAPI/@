@@ -10,8 +10,7 @@ const port = 3000;
 app.use(bodyParser.json());
 
 // Initialize Elasticsearch client
-//const client = new Client({ node: 'http://elasticsearch:9200' });
-const client = new Client({ node: 'http://localhost:9200' });
+const client = new Client({ node: 'http://elasticsearch:9200' });
 
 // Path to the ONNX model file
 const modelPath = './all-MiniLM-L6-v2.onnx';
