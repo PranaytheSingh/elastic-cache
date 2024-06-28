@@ -35,3 +35,8 @@ services:
 volumes:
   esdata:
     driver: local
+
+
+networks:
+  custom-network:
+    driver: bridge

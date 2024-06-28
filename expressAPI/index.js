@@ -1,7 +1,6 @@
 const express = require('express');
 const { Client } = require('@elastic/elasticsearch');
 const ort = require('onnxruntime-node');
-// const { AutoTokenizer } = require('@xenova/transformers')
 const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
@@ -11,8 +10,7 @@ const port = 3000;
 app.use(bodyParser.json());
 
 // Initialize Elasticsearch client
-const client = new Client({ node: 'http://localhost:9200' });
-// const client = new Client({ node: 'http://host.docker.internal:9200' });
+const client = new Client({ node: 'http://elasticsearch:9200' });
 
 // Path to the ONNX model file
 const modelPath = './all-MiniLM-L6-v2.onnx';
@@ -102,17 +100,18 @@ async function getEmbedding(session, text) {
 // Function to index documents into Elasticsearch
 async function indexDocuments(session) {
     for (const file of fs.readdirSync(path.join(__dirname, 'data'))) {
-        console.log(file)
-        if (path.extname(file).toLowerCase() === '.json') {
+        if (!file.endsWith('.json')) {
+            continue;
+        }
         const jsonData = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', file), 'utf8'));
         for (const [i, item] of jsonData.entries()) {
-            console.log(i, item)
             try {
-                if (item.name) {
-                    // throw new Error('Name field is missing');
-                    
+                if (!item.name) {
+                    throw new Error('Name field is missing');
+                }
+
                 const nameVector = await getEmbedding(session, item.name);
-                console.log(nameVector)
+
                 if (nameVector.length !== 384) {
                     throw new Error(`Vector dimension mismatch for document ID ${i + 1}`);
                 }
@@ -134,13 +133,10 @@ async function indexDocuments(session) {
                 };
 
                 await client.index({ index: indexName, id: i + 1, body: document });
-                }
-
             } catch (e) {
                 console.error(`Error indexing document ID ${i + 1}: ${e}`);
             }
         }
-    }
     }
 }
 
@@ -173,22 +169,18 @@ async function searchByNameVector(queryVector) {
 
 // Route to index data into Elasticsearch
 app.post('/enter-data', async (req, res) => {
-    console.log(`embedding data`)
     try {
         await createIndex();
         const session = await ort.InferenceSession.create(modelPath);
-        console.log(session)
         await indexDocuments(session);
         res.status(200).send({ message: 'Data has been indexed successfully' });
     } catch (error) {
-        console.log('Error embedding data',error)
         res.status(500).send({ error: error.message });
     }
 });
 
 // Route to perform vector similarity search
 app.post('/vector-search', async (req, res) => {
-    console.log(`performing vector search`)
     const { queryText } = req.body;
     try {
         const session = await ort.InferenceSession.create(modelPath);
@@ -202,7 +194,6 @@ app.post('/vector-search', async (req, res) => {
 
 // Route to perform text-based fuzzy search on ProductName and Description
 app.post('/text-search', async (req, res) => {
-    console.log(`performing text search`)
     const { nameQueryText, descQueryText } = req.body;
 
     try {
